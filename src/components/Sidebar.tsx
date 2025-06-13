@@ -15,7 +15,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   currentPage = 'dashboard',
   onPageChange
 }) => {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const today = new Date();
+  const [selectedDate, setSelectedDate] = useState(today);
   const [showCalendar, setShowCalendar] = useState(false);
 
   const menuItems = [
@@ -76,7 +77,6 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const { year, month, day, weekday } = formatDate(selectedDate);
   const calendarDays = generateCalendarDays(selectedDate);
-  const today = new Date();
 
   return (
     <div className={`

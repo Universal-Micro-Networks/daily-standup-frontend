@@ -50,6 +50,35 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar 
     });
   };
 
+  const handleCopyYesterdayToToday = () => {
+    setFormData(prev => ({
+      ...prev,
+      todayWork: prev.yesterdayWork
+    }));
+  };
+
+  const [recentTasks, setRecentTasks] = useState([
+    'ユーザー認証機能の実装',
+    'APIエンドポイントの設計',
+    'データベーススキーマの更新',
+    'パスワードリセット機能の実装',
+    'ユニットテストの作成'
+  ]);
+
+  const [frequentTasks, setFrequentTasks] = useState([
+    'コードレビューの実施',
+    'ドキュメントの更新',
+    'バグ修正の対応'
+  ]);
+
+  const removeTask = (taskToRemove: string) => {
+    setRecentTasks(prev => prev.filter(task => task !== taskToRemove));
+  };
+
+  const removeFrequentTask = (taskToRemove: string) => {
+    setFrequentTasks(prev => prev.filter(task => task !== taskToRemove));
+  };
+
   const reportData: ReportData[] = [
     {
       id: 1,
@@ -151,8 +180,6 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar 
       <main className="p-6 mac-scrollbar w-full">
         {/* レポートテーブル */}
         <div className="mac-card p-6 hover:mac-box-shadow transition-all duration-300 w-full">
-          <h3 className="text-lg font-semibold text-gray-800 mb-6">2025-06-13のレポート</h3>
-
           {/* デスクトップ表示 */}
           <div className="hidden lg:block overflow-x-auto w-full">
             <table className="w-full">
@@ -288,20 +315,31 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar 
                 <textarea
                   value={formData.yesterdayWork}
                   onChange={(e) => handleInputChange('yesterdayWork', e.target.value)}
-                  className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-80 h-32 px-1 py-0.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                   placeholder="昨日完了したタスクを入力してください"
                 />
               </div>
 
               {/* 今日やること */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  今日やること
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    今日やること
+                  </label>
+                  <button
+                    onClick={handleCopyYesterdayToToday}
+                    className="p-1 hover:bg-gray-100 rounded transition-colors"
+                    title="昨日やったことをコピー"
+                  >
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </div>
                 <textarea
                   value={formData.todayWork}
                   onChange={(e) => handleInputChange('todayWork', e.target.value)}
-                  className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-80 h-32 px-1 py-0.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                   placeholder="今日予定しているタスクを入力してください"
                 />
               </div>
@@ -314,7 +352,7 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar 
                 <textarea
                   value={formData.blockingIssues}
                   onChange={(e) => handleInputChange('blockingIssues', e.target.value)}
-                  className="w-full h-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-80 h-24 px-1 py-0.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                   placeholder="困っていることやブロックしている問題があれば入力してください"
                 />
               </div>
@@ -323,6 +361,63 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar 
 
           {/* フッター */}
           <div className="p-6 border-t border-gray-200">
+            {/* 頻出タスク一覧 */}
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-3">頻出タスク一覧</h4>
+              <div className="space-y-2 max-h-24 overflow-y-auto">
+                {frequentTasks.map((task, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-1 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer"
+                    onClick={() => {
+                      const currentTasks = formData.todayWork ? formData.todayWork.split('\n').filter(t => t.trim()) : [];
+                      const newTask = task;
+                      if (!currentTasks.includes(newTask)) {
+                        const updatedTasks = [...currentTasks, newTask];
+                        handleInputChange('todayWork', updatedTasks.join('\n'));
+                      }
+                    }}
+                  >
+                    <span className="text-sm text-gray-700 truncate">{task}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 優先度の高い次のタスク一覧 */}
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-3">優先度の高い次のタスク一覧</h4>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {recentTasks.map((task, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-1 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                    onClick={() => {
+                      const currentTasks = formData.todayWork ? formData.todayWork.split('\n').filter(t => t.trim()) : [];
+                      const newTask = task;
+                      if (!currentTasks.includes(newTask)) {
+                        const updatedTasks = [...currentTasks, newTask];
+                        handleInputChange('todayWork', updatedTasks.join('\n'));
+                      }
+                    }}
+                  >
+                    <span className="text-sm text-gray-700 truncate">{task}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeTask(task);
+                      }}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <button
               onClick={handleSubmit}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
