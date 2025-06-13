@@ -1,26 +1,93 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { dailyReportAPI } from '../services/api';
 
 interface DailyReportProps {
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
+  selectedDate?: Date;
 }
 
 interface ReportData {
-  id: number;
-  memberName: string;
+  id: string;
+  memberName?: string;
   yesterdayWork: string;
   todayWork: string;
   blockingIssues: string;
-  status: 'completed' | 'in-progress' | 'blocked';
+  status?: 'completed' | 'in-progress' | 'blocked';
+  report_date?: string;
+  yesterday_work?: string;
+  today_plan?: string;
+  issues?: string;
+  user_name?: string;
 }
 
-const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar }) => {
+const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar, selectedDate = new Date() }) => {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [reportData, setReportData] = useState<ReportData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     yesterdayWork: '',
     todayWork: '',
     blockingIssues: ''
   });
+
+  // 日付をYYYY-MM-DD形式にフォーマットする関数
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // APIレスポンスをReportData形式に変換する関数
+  const transformReportData = (apiData: any[]): ReportData[] => {
+    return apiData.map(item => ({
+      id: item.id,
+      memberName: item.user_name || item.memberName || 'メンバー',
+      yesterdayWork: item.yesterday_work || item.yesterdayWork || '',
+      todayWork: item.today_plan || item.todayWork || '',
+      blockingIssues: item.issues || item.blockingIssues || '',
+      status: item.status,
+      report_date: item.report_date,
+      yesterday_work: item.yesterday_work,
+      today_plan: item.today_plan,
+      issues: item.issues,
+      user_name: item.user_name
+    }));
+  };
+
+  // 選択された日付が変更されたときにデータを取得
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const formattedDate = formatDate(selectedDate);
+        const response = await dailyReportAPI.getReports(formattedDate, 100, 0);
+
+        // APIレスポンスからreports配列を取得
+        let reports = [];
+        if (response && response.reports && Array.isArray(response.reports)) {
+          reports = response.reports;
+        } else if (Array.isArray(response)) {
+          reports = response;
+        }
+
+        // データを変換して設定
+        const transformedReports = transformReportData(reports);
+        setReportData(transformedReports);
+      } catch (err) {
+        console.error('Failed to fetch reports:', err);
+        setError('レポートの取得に失敗しました');
+        setReportData([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, [selectedDate]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -78,49 +145,6 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar 
   const removeFrequentTask = (taskToRemove: string) => {
     setFrequentTasks(prev => prev.filter(task => task !== taskToRemove));
   };
-
-  const reportData: ReportData[] = [
-    {
-      id: 1,
-      memberName: '田中太郎',
-      yesterdayWork: 'ユーザー認証機能の実装\nAPIエンドポイントの設計\nデータベーススキーマの更新',
-      todayWork: 'パスワードリセット機能の実装\nユニットテストの作成\nセキュリティレビューの実施',
-      blockingIssues: 'なし',
-      status: 'completed'
-    },
-    {
-      id: 2,
-      memberName: '佐藤花子',
-      yesterdayWork: 'データベース設計の見直し\nER図の更新\nパフォーマンス分析の実行',
-      todayWork: 'マイグレーションスクリプトの作成\nパフォーマンステスト\nインデックス最適化',
-      blockingIssues: '外部APIのレスポンスが遅い',
-      status: 'in-progress'
-    },
-    {
-      id: 3,
-      memberName: '鈴木一郎',
-      yesterdayWork: 'フロントエンドコンポーネントのリファクタリング\nUIライブラリの更新\nレスポンシブデザインの調整',
-      todayWork: '新機能のUI実装\nレスポンシブデザインの調整\nブラウザ互換性テスト',
-      blockingIssues: 'デザインシステムの更新が必要',
-      status: 'in-progress'
-    },
-    {
-      id: 4,
-      memberName: '高橋美咲',
-      yesterdayWork: 'QAテストの実行\nバグレポートの作成\nテストケースの更新',
-      todayWork: '回帰テストの実行\nテストケースの更新\nテスト環境の設定確認',
-      blockingIssues: 'テスト環境の設定に問題あり',
-      status: 'blocked'
-    },
-    {
-      id: 5,
-      memberName: '伊藤健太',
-      yesterdayWork: 'プロジェクト管理ツールの設定\nタスクの整理\nチームミーティングの実施',
-      todayWork: 'スプリント計画の策定\nチームミーティングの実施\n進捗報告書の作成',
-      blockingIssues: 'なし',
-      status: 'completed'
-    }
-  ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -180,102 +204,151 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar 
       <main className="p-6 mac-scrollbar w-full">
         {/* レポートテーブル */}
         <div className="mac-card p-6 hover:mac-box-shadow transition-all duration-300 w-full">
-          {/* デスクトップ表示 */}
-          <div className="hidden lg:block overflow-x-auto w-full">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-semibold text-gray-800 bg-gray-50/50">メンバー名</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-800 bg-gray-50/50">昨日やったこと</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-800 bg-gray-50/50">今日やること</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-800 bg-gray-50/50">困っていること・ボトルネック</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reportData.map((item) => (
-                  <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50/30 transition-colors">
-                    <td className="py-4 px-4">
-                      <div className="font-medium text-gray-800">{item.memberName}</div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="text-sm text-gray-700 leading-relaxed">
-                        {item.yesterdayWork.split('\n').map((work, index) => (
-                          <div key={index} className="flex items-start mb-1">
-                            <span className="text-gray-400 mr-2">•</span>
-                            <span>{work}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="text-sm text-gray-700 leading-relaxed">
-                        {item.todayWork.split('\n').map((work, index) => (
-                          <div key={index} className="flex items-start mb-1">
-                            <span className="text-gray-400 mr-2">•</span>
-                            <span>{work}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="text-sm text-gray-700 leading-relaxed">
-                        {item.blockingIssues === 'なし' ? (
-                          <span className="text-green-600">なし</span>
-                        ) : (
-                          <span className="text-red-600">{item.blockingIssues}</span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* モバイル表示 */}
-          <div className="lg:hidden space-y-4">
-            {reportData.map((item) => (
-              <div key={item.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50/30 transition-colors">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-gray-800">{item.memberName}</h4>
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <h5 className="text-sm font-medium text-gray-700 mb-1">昨日やったこと:</h5>
-                    <p className="text-sm text-gray-600 leading-relaxed">
-                      {item.yesterdayWork.split('\n').map((work, index) => (
-                        <div key={index} className="flex items-start mb-1">
-                          <span className="text-gray-400 mr-2">•</span>
-                          <span>{work}</span>
-                        </div>
-                      ))}
-                    </p>
-                  </div>
-                  <div>
-                    <h5 className="text-sm font-medium text-gray-700 mb-1">今日やること:</h5>
-                    <p className="text-sm text-gray-600 leading-relaxed">
-                      {item.todayWork.split('\n').map((work, index) => (
-                        <div key={index} className="flex items-start mb-1">
-                          <span className="text-gray-400 mr-2">•</span>
-                          <span>{work}</span>
-                        </div>
-                      ))}
-                    </p>
-                  </div>
-                  <div>
-                    <h5 className="text-sm font-medium text-gray-700 mb-1">困っていること・ボトルネック:</h5>
-                    <p className="text-sm text-gray-600 leading-relaxed">
-                      {item.blockingIssues === 'なし' ? (
-                        <span className="text-green-600">なし</span>
-                      ) : (
-                        <span className="text-red-600">{item.blockingIssues}</span>
-                      )}
-                    </p>
-                  </div>
-                </div>
+          {/* ローディング状態 */}
+          {isLoading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">データを読み込み中...</p>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {/* エラー状態 */}
+          {error && (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <p className="text-red-600 mb-2">{error}</p>
+                <button
+                  onClick={() => {
+                    const formattedDate = formatDate(selectedDate);
+                    dailyReportAPI.getReports(formattedDate, 100, 0)
+                      .then(setReportData)
+                      .catch(err => setError('レポートの取得に失敗しました'));
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  再試行
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* データ表示 */}
+          {!isLoading && !error && (
+            <>
+              {/* デスクトップ表示 */}
+              <div className="hidden lg:block overflow-x-auto w-full">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-800 bg-gray-50/50">メンバー名</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-800 bg-gray-50/50">昨日やったこと</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-800 bg-gray-50/50">今日やること</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-800 bg-gray-50/50">困っていること・ボトルネック</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {!Array.isArray(reportData) || reportData.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-gray-500">
+                          {formatDate(selectedDate)}のレポートはありません
+                        </td>
+                      </tr>
+                    ) : (
+                      reportData.map((item) => (
+                        <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50/30 transition-colors">
+                          <td className="py-4 px-4">
+                            <div className="font-medium text-gray-800">{item.memberName}</div>
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="text-sm text-gray-700 leading-relaxed">
+                              {item.yesterdayWork.split('\n').map((work, index) => (
+                                <div key={index} className="flex items-start mb-1">
+                                  <span className="text-gray-400 mr-2">•</span>
+                                  <span>{work}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="text-sm text-gray-700 leading-relaxed">
+                              {item.todayWork.split('\n').map((work, index) => (
+                                <div key={index} className="flex items-start mb-1">
+                                  <span className="text-gray-400 mr-2">•</span>
+                                  <span>{work}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="text-sm text-gray-700 leading-relaxed">
+                              {item.blockingIssues === 'なし' ? (
+                                <span className="text-green-600">なし</span>
+                              ) : (
+                                <span className="text-red-600">{item.blockingIssues}</span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* モバイル表示 */}
+              <div className="lg:hidden space-y-4">
+                {!Array.isArray(reportData) || reportData.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    {formatDate(selectedDate)}のレポートはありません
+                  </div>
+                ) : (
+                  reportData.map((item) => (
+                    <div key={item.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50/30 transition-colors">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold text-gray-800">{item.memberName}</h4>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <h5 className="text-sm font-medium text-gray-700 mb-1">昨日やったこと:</h5>
+                          <div className="text-sm text-gray-600 leading-relaxed">
+                            {item.yesterdayWork.split('\n').map((work, index) => (
+                              <div key={index} className="flex items-start mb-1">
+                                <span className="text-gray-400 mr-2">•</span>
+                                <span>{work}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <h5 className="text-sm font-medium text-gray-700 mb-1">今日やること:</h5>
+                          <div className="text-sm text-gray-600 leading-relaxed">
+                            {item.todayWork.split('\n').map((work, index) => (
+                              <div key={index} className="flex items-start mb-1">
+                                <span className="text-gray-400 mr-2">•</span>
+                                <span>{work}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <h5 className="text-sm font-medium text-gray-700 mb-1">困っていること・ボトルネック:</h5>
+                          <div className="text-sm text-gray-600 leading-relaxed">
+                            {item.blockingIssues === 'なし' ? (
+                              <span className="text-green-600">なし</span>
+                            ) : (
+                              <span className="text-red-600">{item.blockingIssues}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
         </div>
       </main>
 
