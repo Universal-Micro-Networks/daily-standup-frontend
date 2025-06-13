@@ -1,0 +1,156 @@
+@import "tailwindcss";
+
+/* Mac向けの最適化 */
+@layer base {
+  html {
+    /* Macの高DPIディスプレイ向けの最適化 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /* Macのシステムフォントを使用 */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  body {
+    /* Macの背景色に合わせた調整 */
+    background-color: #f8fafc;
+    color: #1e293b;
+    /* Macのスクロール動作を滑らかに */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Macのボタン要素の最適化 */
+  button {
+    /* Macのボタン風のスタイル */
+    -webkit-appearance: none;
+    border-radius: 6px;
+    /* Macのフォーカスリング */
+    outline: none;
+  }
+
+  button:focus-visible {
+    /* Macのアクセシビリティ向上 */
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+
+  /* Macの入力フィールドの最適化 */
+  input, textarea, select {
+    -webkit-appearance: none;
+    border-radius: 6px;
+    /* Macのフォーカスリング */
+    outline: none;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Mac向けのカスタムコンポーネントスタイル */
+  .mac-card {
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    border: 1px solid #f1f5f9;
+    /* Macのガラス効果風 */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .mac-button {
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    /* Macのボタン風の影 */
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  }
+
+  .mac-button:hover {
+    /* Macのホバー効果 */
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .mac-button:active {
+    transform: translateY(0);
+  }
+
+  /* Mac向けのサイドバー */
+  .mac-sidebar {
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(229, 231, 235, 0.5);
+  }
+
+  /* Mac向けのヘッダー */
+  .mac-header {
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+  }
+
+  /* Mac向けのプログレスバー */
+  .mac-progress {
+    background-color: #e5e7eb;
+    border-radius: 9999px;
+    overflow: hidden;
+    /* Macの滑らかなアニメーション */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .mac-progress-bar {
+    height: 0.5rem;
+    border-radius: 9999px;
+    transition: all 0.5s ease-out;
+    /* Macのグラデーション効果 */
+    background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
+  }
+}
+
+@layer utilities {
+  /* Mac向けのユーティリティクラス */
+  .mac-text-shadow {
+    /* Macのテキストシャドウ */
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .mac-box-shadow {
+    /* Macのボックスシャドウ */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .mac-box-shadow-lg {
+    /* Macの大きなボックスシャドウ */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Macのスクロールバー */
+  .mac-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+  }
+
+  .mac-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .mac-scrollbar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+  }
+
+  .mac-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+
+  .mac-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}
