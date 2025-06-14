@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-type PageType = 'dashboard' | 'daily-report';
+type PageType = 'dashboard' | 'daily-report' | 'team';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -11,6 +11,7 @@ interface SidebarProps {
   user?: any;
   selectedDate?: Date;
   onDateChange?: (date: Date) => void;
+  onOpenSettings?: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -21,7 +22,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onLogout,
   user,
   selectedDate = new Date(),
-  onDateChange
+  onDateChange,
+  onOpenSettings
 }) => {
   const today = new Date();
   const [showCalendar, setShowCalendar] = useState(false);
@@ -43,10 +45,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   const menuItems = [
     { id: 'dashboard', label: 'ダッシュボード', icon: '📊' },
     { id: 'daily-report', label: 'デイリーレポート', icon: '📝' },
+    { id: 'team', label: 'チーム', icon: '👥' },
   ];
 
   const handleMenuClick = (pageId: string) => {
-    if (onPageChange && (pageId === 'dashboard' || pageId === 'daily-report')) {
+    if (onPageChange && (pageId === 'dashboard' || pageId === 'daily-report' || pageId === 'team')) {
       onPageChange(pageId as PageType);
     }
   };
@@ -59,6 +62,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     setShowUserMenu(false);
     if (onLogout) {
       onLogout();
+    }
+  };
+
+  const handleSettingsClick = () => {
+    setShowUserMenu(false);
+    if (onOpenSettings) {
+      onOpenSettings();
     }
   };
 
@@ -310,6 +320,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               {showUserMenu && (
                 <div className="absolute left-full top-0 ml-1 w-48 bg-white border border-gray-300 rounded-lg shadow-lg z-50">
                   <button
+                    onClick={handleSettingsClick}
                     className="w-full flex items-center px-4 py-3 text-left hover:bg-gray-50 transition-colors duration-200 text-gray-700 border-b border-gray-100"
                   >
                     <span className="mr-3 text-lg">⚙️</span>

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import Configuration from './Configuration';
 import DailyReport from './DailyReport';
 import Dashboard from './Dashboard';
 import Sidebar from './Sidebar';
+import Team from './Team';
 
-type PageType = 'dashboard' | 'daily-report';
+type PageType = 'dashboard' | 'daily-report' | 'team';
 
 interface LayoutProps {
   onLogout?: () => void;
@@ -14,6 +16,7 @@ const Layout: React.FC<LayoutProps> = ({ onLogout, user }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentPage, setCurrentPage] = useState<PageType>('daily-report');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showSettings, setShowSettings] = useState(false);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -27,6 +30,32 @@ const Layout: React.FC<LayoutProps> = ({ onLogout, user }) => {
     setSelectedDate(date);
   };
 
+  const handleOpenSettings = () => {
+    setShowSettings(true);
+  };
+
+  const handleCloseSettings = () => {
+    setShowSettings(false);
+  };
+
+  const renderCurrentPage = () => {
+    switch (currentPage) {
+      case 'dashboard':
+        return <Dashboard sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />;
+      case 'team':
+        return <Team sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />;
+      case 'daily-report':
+      default:
+        return (
+          <DailyReport
+            sidebarOpen={sidebarOpen}
+            onToggleSidebar={toggleSidebar}
+            selectedDate={selectedDate}
+          />
+        );
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar
@@ -38,18 +67,16 @@ const Layout: React.FC<LayoutProps> = ({ onLogout, user }) => {
         user={user}
         selectedDate={selectedDate}
         onDateChange={handleDateChange}
+        onOpenSettings={handleOpenSettings}
       />
       <div className="flex-1 flex flex-col min-w-0">
-        {currentPage === 'dashboard' ? (
-          <Dashboard sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
-        ) : (
-          <DailyReport
-            sidebarOpen={sidebarOpen}
-            onToggleSidebar={toggleSidebar}
-            selectedDate={selectedDate}
-          />
-        )}
+        {renderCurrentPage()}
       </div>
+
+      {/* 設定画面 */}
+      {showSettings && (
+        <Configuration onClose={handleCloseSettings} />
+      )}
     </div>
   );
 };

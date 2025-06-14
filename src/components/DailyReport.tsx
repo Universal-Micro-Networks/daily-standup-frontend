@@ -46,6 +46,31 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
     return `${year}-${month}-${day}`;
   };
 
+  // MarkdownリンクをHTMLリンクに変換する関数
+  const convertMarkdownLinks = (text: string): string => {
+    if (!text) return '';
+
+    // Markdownリンクの正規表現: [テキスト](URL)
+    const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+
+    return text.replace(markdownLinkRegex, (match, linkText, url) => {
+      // URLがhttpまたはhttpsで始まるかチェック
+      const validUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
+      return `<a href="${validUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 underline">${linkText}</a>`;
+    });
+  };
+
+  // テキストを安全にHTMLとして表示する関数
+  const renderTextWithLinks = (text: string): JSX.Element => {
+    if (!text) return <span></span>;
+
+    const htmlWithLinks = convertMarkdownLinks(text);
+    // 改行文字を<br>タグに変換
+    const htmlWithLineBreaks = htmlWithLinks.replace(/\n/g, '<br>');
+
+    return <span dangerouslySetInnerHTML={{ __html: htmlWithLineBreaks }} />;
+  };
+
   // ユーザーのレポートを検索する関数
   const findUserReport = (reports: ReportData[], userId: string): ReportData | null => {
     console.log('Searching for user report with ID:', userId);
@@ -424,31 +449,17 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
                           </td>
                           <td className="py-4 px-4">
                             <div className="text-sm text-gray-700 leading-relaxed">
-                              {item.yesterdayWork.split('\n').map((work, index) => (
-                                <div key={index} className="flex items-start mb-1">
-                                  <span className="text-gray-400 mr-2">•</span>
-                                  <span>{work}</span>
-                                </div>
-                              ))}
+                              {renderTextWithLinks(item.yesterdayWork)}
                             </div>
                           </td>
                           <td className="py-4 px-4">
                             <div className="text-sm text-gray-700 leading-relaxed">
-                              {item.todayWork.split('\n').map((work, index) => (
-                                <div key={index} className="flex items-start mb-1">
-                                  <span className="text-gray-400 mr-2">•</span>
-                                  <span>{work}</span>
-                                </div>
-                              ))}
+                              {renderTextWithLinks(item.todayWork)}
                             </div>
                           </td>
                           <td className="py-4 px-4">
                             <div className="text-sm text-gray-700 leading-relaxed">
-                              {item.blockingIssues === 'なし' ? (
-                                <span className="text-green-600">なし</span>
-                              ) : (
-                                <span className="text-red-600">{item.blockingIssues}</span>
-                              )}
+                              {renderTextWithLinks(item.blockingIssues)}
                             </div>
                           </td>
                         </tr>
@@ -474,33 +485,19 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
                         <div>
                           <h5 className="text-sm font-medium text-gray-700 mb-1">昨日やったこと:</h5>
                           <div className="text-sm text-gray-600 leading-relaxed">
-                            {item.yesterdayWork.split('\n').map((work, index) => (
-                              <div key={index} className="flex items-start mb-1">
-                                <span className="text-gray-400 mr-2">•</span>
-                                <span>{work}</span>
-                              </div>
-                            ))}
+                            {renderTextWithLinks(item.yesterdayWork)}
                           </div>
                         </div>
                         <div>
                           <h5 className="text-sm font-medium text-gray-700 mb-1">今日やること:</h5>
                           <div className="text-sm text-gray-600 leading-relaxed">
-                            {item.todayWork.split('\n').map((work, index) => (
-                              <div key={index} className="flex items-start mb-1">
-                                <span className="text-gray-400 mr-2">•</span>
-                                <span>{work}</span>
-                              </div>
-                            ))}
+                            {renderTextWithLinks(item.todayWork)}
                           </div>
                         </div>
                         <div>
                           <h5 className="text-sm font-medium text-gray-700 mb-1">困っていること・ボトルネック:</h5>
                           <div className="text-sm text-gray-600 leading-relaxed">
-                            {item.blockingIssues === 'なし' ? (
-                              <span className="text-green-600">なし</span>
-                            ) : (
-                              <span className="text-red-600">{item.blockingIssues}</span>
-                            )}
+                            {renderTextWithLinks(item.blockingIssues)}
                           </div>
                         </div>
                       </div>
@@ -554,6 +551,33 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
 
           {/* フォーム */}
           <div className="flex-1 p-6 overflow-y-auto">
+            {/* 現在のレポート表示（編集モードの場合） */}
+            {isEditing && userReport && (
+              <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">現在のレポート内容</h4>
+                <div className="space-y-3">
+                  <div>
+                    <h5 className="text-xs font-medium text-gray-600 mb-1">昨日やったこと:</h5>
+                    <div className="text-xs text-gray-600 leading-relaxed">
+                      {renderTextWithLinks(userReport.yesterday_work || userReport.yesterdayWork || '')}
+                    </div>
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-medium text-gray-600 mb-1">今日やること:</h5>
+                    <div className="text-xs text-gray-600 leading-relaxed">
+                      {renderTextWithLinks(userReport.today_plan || userReport.todayWork || '')}
+                    </div>
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-medium text-gray-600 mb-1">困っていること・ボトルネック:</h5>
+                    <div className="text-xs text-gray-600 leading-relaxed">
+                      {renderTextWithLinks(userReport.issues || userReport.blockingIssues || '')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-6">
               {/* 昨日やったこと */}
               <div>

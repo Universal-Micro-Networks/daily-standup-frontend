@@ -62,6 +62,12 @@ class ApiClient {
       headers,
     };
 
+    console.log(`API Request: ${options.method || "GET"} ${url}`);
+    console.log("Request headers:", headers);
+    if (options.body) {
+      console.log("Request body:", options.body);
+    }
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
@@ -73,6 +79,12 @@ class ApiClient {
 
       clearTimeout(timeoutId);
 
+      console.log(`API Response: ${response.status} ${response.statusText}`);
+      console.log(
+        "Response headers:",
+        Object.fromEntries(response.headers.entries())
+      );
+
       if (response.status === 401) {
         // 401エラーの場合、トークンを削除してログイン画面を表示
         this.removeAuthToken();
@@ -83,10 +95,16 @@ class ApiClient {
       }
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error("API Error Response:", errorText);
+        throw new Error(
+          `HTTP error! status: ${response.status}, message: ${errorText}`
+        );
       }
 
-      return await response.json();
+      const responseData = await response.json();
+      console.log("API Response data:", responseData);
+      return responseData;
     } catch (error) {
       console.error("API request failed:", error);
       throw error;
@@ -173,6 +191,75 @@ export const authAPI = {
   // ユーザー情報取得
   async getCurrentUser(): Promise<any> {
     return apiClient.get("/users/me");
+  },
+};
+
+// ユーザー関連のAPI
+export const userAPI = {
+  // ユーザー一覧取得
+  async getUsers(limit: number = 100, offset: number = 0): Promise<any[]> {
+    try {
+      const params = new URLSearchParams();
+      if (limit) params.append("limit", limit.toString());
+      if (offset) params.append("offset", offset.toString());
+
+      const queryString = params.toString();
+      const endpoint = queryString ? `/users?${queryString}` : "/users";
+
+      const response = await apiClient.get<any[]>(endpoint);
+
+      // レスポンスが配列でない場合の処理
+      if (!Array.isArray(response)) {
+        console.warn("API response is not an array:", response);
+        return [];
+      }
+
+      return response;
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      throw error;
+    }
+  },
+
+  // 特定のユーザー情報取得
+  async getUser(id: string): Promise<any> {
+    return apiClient.get(`/users/${id}`);
+  },
+
+  // ユーザー招待
+  async inviteUser(data: { email: string; role?: string }): Promise<any> {
+    return apiClient.post("/users/invite", data);
+  },
+
+  // 招待中のユーザー一覧取得
+  async getPendingInvites(): Promise<any[]> {
+    try {
+      const response = await apiClient.get<any[]>("/users/invites/pending");
+
+      // レスポンスが配列でない場合の処理
+      if (!Array.isArray(response)) {
+        console.warn(
+          "API response for pending invites is not an array:",
+          response
+        );
+        return [];
+      }
+
+      return response;
+    } catch (error) {
+      console.error("Failed to fetch pending invites:", error);
+      throw error;
+    }
+  },
+
+  // 招待の再送信
+  async resendInvite(inviteId: string): Promise<any> {
+    return apiClient.post(`/users/invites/${inviteId}/resend`);
+  },
+
+  // 招待の取り消し
+  async cancelInvite(inviteId: string): Promise<any> {
+    return apiClient.delete(`/users/invites/${inviteId}`);
   },
 };
 
