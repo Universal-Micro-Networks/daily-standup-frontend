@@ -5,6 +5,7 @@ class ApiClient {
   private baseURL: string;
   private timeout: number;
   private defaultHeaders: Record<string, string>;
+  private onUnauthorized: (() => void) | null = null;
 
   constructor() {
     this.baseURL = apiConfig.baseURL;
@@ -12,9 +13,24 @@ class ApiClient {
     this.defaultHeaders = apiConfig.headers;
   }
 
+  // 認証失敗時のコールバックを設定
+  setUnauthorizedCallback(callback: () => void) {
+    this.onUnauthorized = callback;
+  }
+
   // 認証トークンを取得
   private getAuthToken(): string | null {
     return localStorage.getItem(authConfig.tokenKey);
+  }
+
+  // 認証トークンを保存
+  private setAuthToken(token: string): void {
+    localStorage.setItem(authConfig.tokenKey, token);
+  }
+
+  // 認証トークンを削除
+  private removeAuthToken(): void {
+    localStorage.removeItem(authConfig.tokenKey);
   }
 
   // リクエストヘッダーを構築
@@ -56,6 +72,15 @@ class ApiClient {
       });
 
       clearTimeout(timeoutId);
+
+      if (response.status === 401) {
+        // 401エラーの場合、トークンを削除してログイン画面を表示
+        this.removeAuthToken();
+        if (this.onUnauthorized) {
+          this.onUnauthorized();
+        }
+        throw new Error("Authentication failed");
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -149,11 +174,6 @@ export const authAPI = {
   async getCurrentUser(): Promise<any> {
     return apiClient.get("/users/me");
   },
-
-  // トークンリフレッシュ
-  async refreshToken(): Promise<{ token: string }> {
-    return apiClient.post("/auth/refresh");
-  },
 };
 
 // デイリーレポート関連のAPI
@@ -175,15 +195,23 @@ export const dailyReportAPI = {
 
   // レポート作成
   async createReport(data: {
-    yesterdayWork: string;
-    todayWork: string;
-    blockingIssues: string;
+    report_date: string;
+    yesterday_work: string;
+    today_plan: string;
+    issues: string;
   }): Promise<any> {
     return apiClient.post("/daily-reports", data);
   },
 
   // レポート更新
-  async updateReport(id: string, data: any): Promise<any> {
+  async updateReport(
+    id: string,
+    data: {
+      yesterday_work: string;
+      today_plan: string;
+      issues: string;
+    }
+  ): Promise<any> {
     return apiClient.put(`/daily-reports/${id}`, data);
   },
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { dailyReportAPI } from '../services/api';
+import { authAPI, dailyReportAPI } from '../services/api';
 
 interface DailyReportProps {
   sidebarOpen: boolean;
@@ -19,6 +19,7 @@ interface ReportData {
   today_plan?: string;
   issues?: string;
   user_name?: string;
+  user_id?: string;
 }
 
 const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar, selectedDate = new Date() }) => {
@@ -26,6 +27,11 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
   const [reportData, setReportData] = useState<ReportData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userReport, setUserReport] = useState<ReportData | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     yesterdayWork: '',
     todayWork: '',
@@ -40,6 +46,66 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
     return `${year}-${month}-${day}`;
   };
 
+  // ユーザーのレポートを検索する関数
+  const findUserReport = (reports: ReportData[], userId: string): ReportData | null => {
+    console.log('Searching for user report with ID:', userId);
+    return reports.find(report => {
+      const reportUserId = report.user_id;
+      const reportUserIdLower = reportUserId?.toLowerCase();
+      const userIdLower = userId?.toLowerCase();
+
+      const isMatch = reportUserId === userId || reportUserIdLower === userIdLower;
+
+      console.log('Comparing report:', {
+        reportId: report.id,
+        reportUserId,
+        searchUserId: userId,
+        isMatch,
+        hasUserId: !!report.user_id
+      });
+
+      return isMatch;
+    }) || null;
+  };
+
+  // 現在のユーザー情報を取得
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const user = await authAPI.getCurrentUser();
+        console.log('Current user:', user);
+        setCurrentUser(user);
+      } catch (err) {
+        console.error('Failed to fetch current user:', err);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
+
+  // ユーザー情報が取得された後にレポート検索を実行
+  useEffect(() => {
+    if (currentUser && reportData.length > 0) {
+      // ユーザーIDのみを使用
+      const userId = currentUser.id || currentUser.user_id;
+
+      console.log('Checking for user report with ID:', userId);
+      console.log('Available user fields:', currentUser);
+      console.log('Available reports:', reportData.map(r => ({
+        id: r.id,
+        user_name: r.user_name,
+        user_id: r.user_id
+      })));
+
+      // ユーザーIDでのみ検索
+      const userReport = findUserReport(reportData, userId);
+
+      console.log('Found user report:', userReport);
+      setUserReport(userReport);
+      setIsEditing(!!userReport);
+    }
+  }, [currentUser, reportData]);
+
   // APIレスポンスをReportData形式に変換する関数
   const transformReportData = (apiData: any[]): ReportData[] => {
     return apiData.map(item => ({
@@ -53,7 +119,8 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
       yesterday_work: item.yesterday_work,
       today_plan: item.today_plan,
       issues: item.issues,
-      user_name: item.user_name
+      user_name: item.user_name,
+      user_id: item.user_id
     }));
   };
 
@@ -96,16 +163,91 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
     }));
   };
 
-  const handleSubmit = () => {
-    // ここでフォームデータを処理
-    console.log('Submit:', formData);
-    // フォームをリセット
-    setFormData({
-      yesterdayWork: '',
-      todayWork: '',
-      blockingIssues: ''
-    });
-    setIsPanelOpen(false);
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      setSubmitError(null);
+
+      // 必須項目のバリデーション
+      const errors: string[] = [];
+
+      if (!formData.yesterdayWork.trim()) {
+        errors.push('昨日やったことは必須項目です。');
+      }
+
+      if (!formData.todayWork.trim()) {
+        errors.push('今日やることは必須項目です。');
+      }
+
+      // エラーがある場合はすべて表示
+      if (errors.length > 0) {
+        setSubmitError(errors.join('\n'));
+        errors.forEach(error => {
+          console.error(error);
+        });
+        return;
+      }
+
+      if (isEditing && userReport) {
+        // 編集モードの場合
+        const updateData = {
+          yesterday_work: formData.yesterdayWork,
+          today_plan: formData.todayWork,
+          issues: formData.blockingIssues
+        };
+
+        // PUTメソッドでレポートを更新
+        await dailyReportAPI.updateReport(userReport.id, updateData);
+
+        // 成功時の処理
+        console.log('Report updated successfully:', updateData);
+      } else {
+        // 新規作成モードの場合
+        const createData = {
+          report_date: formatDate(selectedDate),
+          yesterday_work: formData.yesterdayWork,
+          today_plan: formData.todayWork,
+          issues: formData.blockingIssues
+        };
+
+        // POSTメソッドでレポートを作成
+        await dailyReportAPI.createReport(createData);
+
+        // 成功時の処理
+        console.log('Report created successfully:', createData);
+      }
+
+      // フォームをリセット
+      setFormData({
+        yesterdayWork: '',
+        todayWork: '',
+        blockingIssues: ''
+      });
+
+      // パネルを閉じる
+      setIsPanelOpen(false);
+      setIsEditing(false);
+
+      // レポート一覧を再取得
+      const formattedDate = formatDate(selectedDate);
+      const response = await dailyReportAPI.getReports(formattedDate, 100, 0);
+
+      let reports = [];
+      if (response && response.reports && Array.isArray(response.reports)) {
+        reports = response.reports;
+      } else if (Array.isArray(response)) {
+        reports = response;
+      }
+
+      const transformedReports = transformReportData(reports);
+      setReportData(transformedReports);
+
+    } catch (err) {
+      console.error('Failed to submit report:', err);
+      setSubmitError(isEditing ? 'レポートの更新に失敗しました。もう一度お試しください。' : 'レポートの送信に失敗しました。もう一度お試しください。');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -115,6 +257,25 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
       todayWork: '',
       blockingIssues: ''
     });
+  };
+
+  const handleOpenPanel = () => {
+    if (isEditing && userReport) {
+      // 編集モードの場合、既存のデータをフォームに設定
+      setFormData({
+        yesterdayWork: userReport.yesterday_work || userReport.yesterdayWork || '',
+        todayWork: userReport.today_plan || userReport.todayWork || '',
+        blockingIssues: userReport.issues || userReport.blockingIssues || ''
+      });
+    } else {
+      // 新規作成モードの場合、フォームをリセット
+      setFormData({
+        yesterdayWork: '',
+        todayWork: '',
+        blockingIssues: ''
+      });
+    }
+    setIsPanelOpen(true);
   };
 
   const handleCopyYesterdayToToday = () => {
@@ -354,10 +515,22 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
 
       {/* フローティングボタン */}
       <button
-        onClick={() => setIsPanelOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center text-2xl font-bold z-50"
+        onClick={handleOpenPanel}
+        className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-50 ${
+          isEditing
+            ? 'bg-orange-500 hover:bg-orange-600 text-white'
+            : 'bg-blue-600 hover:bg-blue-700 text-white'
+        }`}
       >
-        ＋
+        {isEditing ? (
+          // 鉛筆アイコン（編集モード）
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+        ) : (
+          // ＋アイコン（新規作成モード）
+          <span className="text-2xl font-bold">＋</span>
+        )}
       </button>
 
       {/* スライドパネル */}
@@ -366,7 +539,9 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
         <div className="flex flex-col h-full">
           {/* ヘッダー */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h3 className="text-xl font-semibold text-gray-800">デイリーレポート入力</h3>
+            <h3 className="text-xl font-semibold text-gray-800">
+              {isEditing ? 'デイリーレポート編集' : 'デイリーレポート入力'}
+            </h3>
             <button
               onClick={handleClose}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -383,7 +558,7 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
               {/* 昨日やったこと */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  昨日やったこと
+                  昨日やったこと <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={formData.yesterdayWork}
@@ -397,7 +572,7 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700">
-                    今日やること
+                    今日やること <span className="text-red-500">*</span>
                   </label>
                   <button
                     onClick={handleCopyYesterdayToToday}
@@ -430,73 +605,92 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
                 />
               </div>
             </div>
-          </div>
 
-          {/* フッター */}
-          <div className="p-6 border-t border-gray-200">
-            {/* 頻出タスク一覧 */}
-            <div className="mb-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-3">頻出タスク一覧</h4>
-              <div className="space-y-2 max-h-24 overflow-y-auto">
-                {frequentTasks.map((task, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-1 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer"
-                    onClick={() => {
-                      const currentTasks = formData.todayWork ? formData.todayWork.split('\n').filter(t => t.trim()) : [];
-                      const newTask = task;
-                      if (!currentTasks.includes(newTask)) {
-                        const updatedTasks = [...currentTasks, newTask];
-                        handleInputChange('todayWork', updatedTasks.join('\n'));
-                      }
-                    }}
-                  >
-                    <span className="text-sm text-gray-700 truncate">{task}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 優先度の高い次のタスク一覧 */}
-            <div className="mb-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-3">優先度の高い次のタスク一覧</h4>
-              <div className="space-y-2 max-h-32 overflow-y-auto">
-                {recentTasks.map((task, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-1 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                    onClick={() => {
-                      const currentTasks = formData.todayWork ? formData.todayWork.split('\n').filter(t => t.trim()) : [];
-                      const newTask = task;
-                      if (!currentTasks.includes(newTask)) {
-                        const updatedTasks = [...currentTasks, newTask];
-                        handleInputChange('todayWork', updatedTasks.join('\n'));
-                      }
-                    }}
-                  >
-                    <span className="text-sm text-gray-700 truncate">{task}</span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeTask(task);
+            {/* フッター */}
+            <div className="p-6 border-t border-gray-200">
+              {/* 頻出タスク一覧 */}
+              <div className="mb-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">頻出タスク一覧</h4>
+                <div className="space-y-2 max-h-24 overflow-y-auto">
+                  {frequentTasks.map((task, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-1 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer"
+                      onClick={() => {
+                        const currentTasks = formData.todayWork ? formData.todayWork.split('\n').filter(t => t.trim()) : [];
+                        const newTask = task;
+                        if (!currentTasks.includes(newTask)) {
+                          const updatedTasks = [...currentTasks, newTask];
+                          handleInputChange('todayWork', updatedTasks.join('\n'));
+                        }
                       }}
-                      className="text-red-500 hover:text-red-700"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
+                      <span className="text-sm text-gray-700 truncate">{task}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <button
-              onClick={handleSubmit}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
-            >
-              登録
-            </button>
+              {/* 優先度の高い次のタスク一覧 */}
+              <div className="mb-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">優先度の高い次のタスク一覧</h4>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {recentTasks.map((task, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-1 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                      onClick={() => {
+                        const currentTasks = formData.todayWork ? formData.todayWork.split('\n').filter(t => t.trim()) : [];
+                        const newTask = task;
+                        if (!currentTasks.includes(newTask)) {
+                          const updatedTasks = [...currentTasks, newTask];
+                          handleInputChange('todayWork', updatedTasks.join('\n'));
+                        }
+                      }}
+                    >
+                      <span className="text-sm text-gray-700 truncate">{task}</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeTask(task);
+                        }}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* エラーメッセージ */}
+              {submitError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{submitError}</p>
+                </div>
+              )}
+
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className={`w-full font-medium py-3 px-4 rounded-lg transition-colors ${
+                  isSubmitting
+                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    送信中...
+                  </div>
+                ) : (
+                  isEditing ? '更新' : '登録'
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>

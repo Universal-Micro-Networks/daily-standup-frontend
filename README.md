@@ -43,7 +43,15 @@ npm install
 npm run dev
 ```
 
-### 3. ビルド
+### 3. Storybookの起動
+
+```bash
+npm run storybook
+```
+
+Storybookが起動すると、ブラウザで `http://localhost:6006` にアクセスしてコンポーネントの開発・確認ができます。
+
+### 4. ビルド
 
 ```bash
 npm run build
@@ -64,6 +72,30 @@ npm run build
 - **Tailwind CSS**: スタイリング
 - **Vite**: ビルドツール
 - **Storybook**: コンポーネント開発
+
+## Storybook
+
+このプロジェクトでは、コンポーネントの開発・テスト・ドキュメント化のためにStorybookを使用しています。
+
+### Storybookの利点
+
+- **コンポーネントの独立した開発**: アプリケーション全体を起動せずにコンポーネントを開発
+- **インタラクティブなテスト**: コンポーネントの様々な状態を確認
+- **ドキュメント化**: コンポーネントの使用方法とプロパティを自動生成
+- **視覚的なテスト**: コンポーネントの見た目の変更を即座に確認
+
+### 利用可能なストーリー
+
+- `Button.stories.ts` - ボタンコンポーネント
+- `Header.stories.ts` - ヘッダーコンポーネント
+- `Page.stories.ts` - ページコンポーネント
+
+### Storybookの使用方法
+
+1. `npm run storybook` でStorybookを起動
+2. ブラウザで `http://localhost:6006` にアクセス
+3. 左側のサイドバーからコンポーネントを選択
+4. 右側のパネルでプロパティを変更して動作を確認
 
 ## プロジェクト構造
 
