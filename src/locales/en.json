@@ -123,7 +123,7 @@
   "team": {
     "title": "Team",
     "teamManagement": "Team Management",
-    "inviteMember": "Invite Member (Not Implemented)",
+    "inviteMember": "Invite Member",
     "inviteNewMember": "Invite New Member",
     "email": "Email",
     "role": "Role",

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { userAPI } from '../services/api';
 import { getCurrentLanguage, setLanguage, useTranslation, type SupportedLanguage } from '../utils/i18n';
+import { getCurrentTheme, setTheme, type Theme } from '../utils/theme';
 
 interface ConfigurationProps {
   onClose: () => void;
@@ -11,7 +12,7 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
 
   const [settings, setSettings] = useState({
     notifications: true,
-    theme: 'light',
+    theme: getCurrentTheme(),
     language: getCurrentLanguage()
   });
 
@@ -48,6 +49,11 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
       ...prev,
       [key]: value
     }));
+
+    // テーマが変更された場合、即座に適用
+    if (key === 'theme') {
+      setTheme(value as Theme);
+    }
 
     // 言語が変更された場合、即座に適用
     if (key === 'language') {
@@ -218,13 +224,13 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden">
         {/* ヘッダー */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-800">{t('configuration.title')}</h2>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">{t('configuration.title')}</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -236,12 +242,12 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
           <div className="space-y-6">
             {/* ユーザー情報 */}
-            <div className="border-b border-gray-200 pb-6">
+            <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-800">{t('configuration.userInfo')}</h3>
+                <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200">{t('configuration.userInfo')}</h3>
                 <button
                   onClick={() => setShowUserInfoChange(!showUserInfoChange)}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
                 >
                   {showUserInfoChange ? t('configuration.cancel') : t('configuration.edit')}
                 </button>
@@ -250,15 +256,15 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
               {showUserInfoChange ? (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       {t('configuration.name')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={userInfo.name}
                       onChange={(e) => handleUserInfoChange('name', e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        errors.name ? 'border-red-300' : 'border-gray-300'
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                        errors.name ? 'border-red-300 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'
                       }`}
                       placeholder={t('configuration.placeholders.name')}
                     />
@@ -268,15 +274,15 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       {t('configuration.email')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="email"
                       value={userInfo.email}
                       onChange={(e) => handleUserInfoChange('email', e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        errors.email ? 'border-red-300' : 'border-gray-300'
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                        errors.email ? 'border-red-300 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'
                       }`}
                       placeholder={t('configuration.placeholders.email')}
                     />
@@ -287,8 +293,8 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
 
                   {/* エラーメッセージ表示 */}
                   {errors.general && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-sm text-red-600">{errors.general}</p>
+                    <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                      <p className="text-sm text-red-600 dark:text-red-400">{errors.general}</p>
                     </div>
                   )}
 
@@ -298,8 +304,8 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
                       disabled={isSubmitting}
                       className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                         isSubmitting
-                          ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                          : 'bg-blue-600 hover:bg-blue-700 text-white'
+                          ? 'bg-gray-400 dark:bg-gray-600 text-gray-200 dark:text-gray-300 cursor-not-allowed'
+                          : 'bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-500 text-white'
                       }`}
                     >
                       {isSubmitting ? t('configuration.saving') : t('configuration.save')}
@@ -309,7 +315,7 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
                         setShowUserInfoChange(false);
                         setErrors({});
                       }}
-                      className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                      className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
                     >
                       {t('configuration.cancel')}
                     </button>
@@ -320,17 +326,17 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
                   {isLoadingUserInfo ? (
                     <div className="flex items-center justify-center py-4">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                      <span className="ml-2 text-sm text-gray-600">読み込み中...</span>
+                      <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">読み込み中...</span>
                     </div>
                   ) : (
                     <>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">{t('configuration.name')}:</span>
-                        <span className="text-sm font-medium text-gray-800">{userInfo.name}</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">{t('configuration.name')}:</span>
+                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{userInfo.name}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">{t('configuration.email')}:</span>
-                        <span className="text-sm font-medium text-gray-800">{userInfo.email}</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">{t('configuration.email')}:</span>
+                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{userInfo.email}</span>
                       </div>
                     </>
                   )}

@@ -245,8 +245,8 @@ export const userAPI = {
   },
 
   // ユーザー招待
-  async inviteUser(data: { email: string; role?: string }): Promise<any> {
-    return apiClient.post("/users/invite", data);
+  async inviteUser(data: { email: string }): Promise<any> {
+    return apiClient.post("/invitations/", data);
   },
 
   // パスワード変更
@@ -267,35 +267,45 @@ export const userAPI = {
     return apiClient.put("/users/me", data);
   },
 
-  // 招待中のユーザー一覧取得
-  async getPendingInvites(): Promise<any[]> {
+  // 招待データ取得（新しいエンドポイント）
+  async getInvitations(): Promise<any[]> {
     try {
-      const response = await apiClient.get<any[]>("/users/invites/pending");
+      const params = new URLSearchParams({
+        include_expired: "true",
+      });
 
-      // レスポンスが配列でない場合の処理
-      if (!Array.isArray(response)) {
-        console.warn(
-          "API response for pending invites is not an array:",
-          response
-        );
-        return [];
+      const response = await apiClient.get<any>(
+        `/invitations?${params.toString()}`
+      );
+
+      // レスポンスからinvitations配列を取得
+      if (
+        response &&
+        response.invitations &&
+        Array.isArray(response.invitations)
+      ) {
+        return response.invitations;
       }
 
-      return response;
+      console.warn(
+        "API response for invitations is not in expected format:",
+        response
+      );
+      return [];
     } catch (error) {
-      console.error("Failed to fetch pending invites:", error);
+      console.error("Failed to fetch invitations:", error);
       throw error;
     }
   },
 
   // 招待の再送信
   async resendInvite(inviteId: string): Promise<any> {
-    return apiClient.post(`/users/invites/${inviteId}/resend`);
+    return apiClient.post(`/invitations/${inviteId}/resend`);
   },
 
   // 招待の取り消し
   async cancelInvite(inviteId: string): Promise<any> {
-    return apiClient.delete(`/users/invites/${inviteId}`);
+    return apiClient.delete(`/invitations/${inviteId}`);
   },
 };
 

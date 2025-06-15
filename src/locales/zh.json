@@ -1,0 +1,49 @@
+{
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "loading": "加载中...",
+    "error": "错误",
+    "success": "成功"
+  },
+  "auth": {
+    "login": "登录",
+    "logout": "登出",
+    "email": "邮箱",
+    "password": "密码",
+    "loginButton": "登录",
+    "loginError": "登录失败"
+  },
+  "dailyReport": {
+    "title": "日报",
+    "yesterday": "昨天做了什么",
+    "today": "今天计划做什么",
+    "blockers": "有什么阻碍",
+    "submit": "提交日报",
+    "edit": "编辑日报",
+    "delete": "删除日报"
+  },
+  "sidebar": {
+    "dashboard": "仪表板",
+    "dailyReports": "日报",
+    "team": "团队",
+    "settings": "设置"
+  },
+  "settings": {
+    "title": "设置",
+    "profile": "个人资料",
+    "theme": "主题",
+    "language": "语言",
+    "light": "浅色",
+    "dark": "深色",
+    "auto": "自动"
+  },
+  "team": {
+    "title": "团队",
+    "members": "成员",
+    "invite": "邀请",
+    "remove": "移除"
+  }
+}

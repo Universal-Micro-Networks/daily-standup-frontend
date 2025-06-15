@@ -39,51 +39,91 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'members' | 'pending'>('members');
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false);
+  const [isLoadingInvitations, setIsLoadingInvitations] = useState(false);
 
-  // APIからユーザー情報を取得
+  // メンバーデータを取得
+  const fetchMembers = async () => {
+    try {
+      setIsLoadingMembers(true);
+      setError(null);
+
+      console.log('Fetching users...');
+      const users = await userAPI.getUsers(100, 0);
+
+      console.log('Raw users response:', users);
+
+      // ユーザー一覧をTeamMember形式に変換
+      const transformedUsers: TeamMember[] = users.map((user: any) => {
+        console.log('Processing user:', user);
+        return {
+          id: user.id || user.user_id || user.uuid || '',
+          name: user.name || user.username || user.display_name || user.full_name || 'Unknown',
+          email: user.email || user.mail || '',
+          role: user.role || user.job_title || user.position || t('team.member'),
+          avatar: user.avatar || user.profile_image || user.profile_picture,
+          status: user.status || (user.is_active !== undefined ? (user.is_active ? 'active' : 'inactive') : 'active'),
+          lastActive: user.last_active || user.last_login || user.updated_at || user.created_at
+        };
+      });
+
+      console.log('Transformed users:', transformedUsers);
+      setTeamMembers(transformedUsers);
+
+    } catch (err) {
+      console.error('Failed to fetch members:', err);
+      setError(t('team.error'));
+      setTeamMembers([]);
+    } finally {
+      setIsLoadingMembers(false);
+    }
+  };
+
+  // 招待データを取得
+  const fetchInvitations = async () => {
+    try {
+      setIsLoadingInvitations(true);
+      setError(null);
+
+      console.log('Fetching invitations...');
+      const invitations = await userAPI.getInvitations();
+
+      console.log('Raw invitations response:', invitations);
+
+      // 招待データをPendingInvite形式に変換
+      const transformedInvites: PendingInvite[] = invitations.map((invitation: any) => ({
+        id: invitation.id,
+        email: invitation.email,
+        role: t('team.member'), // デフォルトの役職
+        invitedAt: invitation.created_at,
+        expiresAt: invitation.expires_at
+      }));
+
+      console.log('Transformed invitations:', transformedInvites);
+      setPendingInvites(transformedInvites);
+
+    } catch (err) {
+      console.error('Failed to fetch invitations:', err);
+      setError(t('team.error'));
+      setPendingInvites([]);
+    } finally {
+      setIsLoadingInvitations(false);
+    }
+  };
+
+  // タブ切り替え時の処理
+  const handleTabChange = (tab: 'members' | 'pending') => {
+    setActiveTab(tab);
+    if (tab === 'members') {
+      fetchMembers();
+    } else if (tab === 'pending') {
+      fetchInvitations();
+    }
+  };
+
+  // 初期データ取得
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        console.log('Fetching users...');
-
-        // ユーザー一覧のみ取得（招待中のユーザー一覧は一時的に無効化）
-        const users = await userAPI.getUsers(100, 0);
-
-        console.log('Raw users response:', users);
-
-        // ユーザー一覧をTeamMember形式に変換
-        const transformedUsers: TeamMember[] = users.map((user: any) => {
-          console.log('Processing user:', user);
-          return {
-            id: user.id || user.user_id || user.uuid || '',
-            name: user.name || user.username || user.display_name || user.full_name || 'Unknown',
-            email: user.email || user.mail || '',
-            role: user.role || user.job_title || user.position || t('team.member'),
-            avatar: user.avatar || user.profile_image || user.profile_picture,
-            status: user.status || (user.is_active !== undefined ? (user.is_active ? 'active' : 'inactive') : 'active'),
-            lastActive: user.last_active || user.last_login || user.updated_at || user.created_at
-          };
-        });
-
-        console.log('Transformed users:', transformedUsers);
-
-        setTeamMembers(transformedUsers);
-        setPendingInvites([]); // 一時的に空配列を設定
-
-      } catch (err) {
-        console.error('Failed to fetch data:', err);
-        setError(t('team.error'));
-        setTeamMembers([]);
-        setPendingInvites([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
+    fetchMembers();
   }, [t]);
 
   const handleInviteUser = async (e: React.FormEvent) => {
@@ -101,35 +141,28 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
       return;
     }
 
-    // 一時的に招待機能を無効化
-    setInviteError(t('team.inviteError'));
-    return;
-
-    // 以下のコードは一時的にコメントアウト
-    /*
     try {
       setIsInviting(true);
       setInviteError(null);
       setInviteSuccess(null);
 
       await userAPI.inviteUser({
-        email: inviteEmail.trim(),
-        role: inviteRole
+        email: inviteEmail.trim()
       });
 
       setInviteSuccess(`${inviteEmail} に招待メールを送信しました`);
       setInviteEmail('');
-      setInviteRole('メンバー');
+      setInviteRole(t('team.member'));
       setShowInviteForm(false);
 
       // 招待中のユーザー一覧を再取得
-      const invites = await userAPI.getPendingInvites();
-      const transformedInvites: PendingInvite[] = invites.map((invite: any) => ({
-        id: invite.id || invite.invite_id,
-        email: invite.email,
-        role: invite.role || 'メンバー',
-        invitedAt: invite.invited_at || invite.created_at,
-        expiresAt: invite.expires_at
+      const invitations = await userAPI.getInvitations();
+      const transformedInvites: PendingInvite[] = invitations.map((invitation: any) => ({
+        id: invitation.id,
+        email: invitation.email,
+        role: t('team.member'), // デフォルトの役職
+        invitedAt: invitation.created_at,
+        expiresAt: invitation.expires_at
       }));
       setPendingInvites(transformedInvites);
 
@@ -144,7 +177,6 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
     } finally {
       setIsInviting(false);
     }
-    */
   };
 
   const handleResendInvite = async (inviteId: string, email: string) => {
@@ -253,20 +285,18 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
             <button
               onClick={() => setShowInviteForm(!showInviteForm)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-              disabled={true}
-              title={t('team.inviteError')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
-              <span>{t('team.inviteMember')}</span>
+              <span>{t('team.inviteNewMember')}</span>
             </button>
           </div>
 
           {/* 招待フォーム */}
           {showInviteForm && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h4 className="text-lg font-medium text-blue-800 mb-4">{t('team.inviteNewMember')}</h4>
+            <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+              <h4 className="text-lg font-medium text-gray-800 mb-4">{t('team.inviteNewMember')}</h4>
               <form onSubmit={handleInviteUser} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -358,7 +388,7 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
             <div className="border-b border-gray-200">
               <nav className="-mb-px flex space-x-8">
                 <button
-                  onClick={() => setActiveTab('members')}
+                  onClick={() => handleTabChange('members')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${
                     activeTab === 'members'
                       ? 'border-blue-500 text-blue-600'
@@ -368,16 +398,14 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
                   {t('team.members')} ({teamMembers.length})
                 </button>
                 <button
-                  onClick={() => setActiveTab('pending')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm cursor-not-allowed ${
+                  onClick={() => handleTabChange('pending')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
                     activeTab === 'pending'
-                      ? 'border-gray-400 text-gray-400'
-                      : 'border-transparent text-gray-400'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
-                  disabled={true}
-                  title={t('team.inviteError')}
                 >
-                  {t('team.pending')} ({pendingInvites.length}) - {t('team.notImplemented')}
+                  {t('team.pending')} ({pendingInvites.length})
                 </button>
               </nav>
             </div>
@@ -402,7 +430,7 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
           </div>
 
           {/* ローディング状態 */}
-          {isLoading && (
+          {(isLoadingMembers || isLoadingInvitations) && (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -417,7 +445,13 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
               <div className="text-center">
                 <p className="text-red-600 mb-2">{error}</p>
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={() => {
+                    if (activeTab === 'members') {
+                      fetchMembers();
+                    } else {
+                      fetchInvitations();
+                    }
+                  }}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   {t('team.retry')}
@@ -427,7 +461,7 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
           )}
 
           {/* メンバー一覧 */}
-          {!isLoading && !error && activeTab === 'members' && (
+          {!isLoadingMembers && !error && activeTab === 'members' && (
             <div className="space-y-4">
               {filteredMembers.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
@@ -482,7 +516,7 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
           )}
 
           {/* 招待中のユーザー一覧 */}
-          {!isLoading && !error && activeTab === 'pending' && (
+          {!isLoadingInvitations && !error && activeTab === 'pending' && (
             <div className="space-y-4">
               {filteredInvites.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
@@ -506,8 +540,7 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-lg font-semibold text-gray-800">{invite.email}</h3>
-                          <p className="text-sm text-gray-600">{t('team.role')}: {invite.role}</p>
-                          <p className="text-sm text-gray-500">招待日時: {formatDate(invite.invitedAt)}</p>
+                          <p className="text-sm text-gray-500">有効期限: {formatDate(invite.expiresAt)}</p>
                         </div>
                         <div className="flex items-center space-x-2">
                           <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">

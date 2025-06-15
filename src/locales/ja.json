@@ -124,7 +124,7 @@
   "team": {
     "title": "チーム",
     "teamManagement": "チーム管理",
-    "inviteMember": "メンバーを招待（未実装）",
+    "inviteMember": "メンバーを招待",
     "inviteNewMember": "新しいメンバーを招待",
     "email": "メールアドレス",
     "role": "役職",
