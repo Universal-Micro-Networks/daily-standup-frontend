@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { userAPI } from '../services/api';
 import { getCurrentLanguage, setLanguage, useTranslation, type SupportedLanguage } from '../utils/i18n';
 
 interface ConfigurationProps {
@@ -16,8 +17,14 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
 
   // ユーザー情報の状態
   const [userInfo, setUserInfo] = useState({
-    name: '田中太郎',
-    email: 'tanaka@example.com'
+    name: '',
+    email: ''
+  });
+
+  // 元のユーザー情報を保持（変更検出用）
+  const [originalUserInfo, setOriginalUserInfo] = useState({
+    name: '',
+    email: ''
   });
 
   // パスワード変更の状態
@@ -34,6 +41,7 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
   // エラー状態
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingUserInfo, setIsLoadingUserInfo] = useState(true);
 
   const handleSettingChange = (key: string, value: any) => {
     setSettings(prev => ({
@@ -120,14 +128,29 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
 
     setIsSubmitting(true);
     try {
-      // API呼び出しをシミュレート
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 名前が変更された場合のみ更新
+      if (userInfo.name !== originalUserInfo.name) {
+        await userAPI.updateUserName({
+          name: userInfo.name
+        });
+        console.log('User name updated successfully');
 
-      console.log('User info updated:', userInfo);
+        // 元のユーザー情報を更新（名前のみ）
+        setOriginalUserInfo(prev => ({
+          ...prev,
+          name: userInfo.name
+        }));
+      }
+
       setShowUserInfoChange(false);
       setErrors({});
     } catch (error) {
       console.error('Failed to update user info:', error);
+      // エラーメッセージを表示
+      setErrors(prev => ({
+        ...prev,
+        general: 'ユーザー情報の更新に失敗しました。'
+      }));
     } finally {
       setIsSubmitting(false);
     }
@@ -138,10 +161,13 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
 
     setIsSubmitting(true);
     try {
-      // API呼び出しをシミュレート
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // バックエンドAPIを呼び出し
+      await userAPI.changePassword({
+        new_password: passwordChange.newPassword,
+        confirm_password: passwordChange.confirmPassword
+      });
 
-      console.log('Password changed:', passwordChange);
+      console.log('Password changed successfully');
       setShowPasswordChange(false);
       setPasswordChange({
         currentPassword: '',
@@ -151,6 +177,11 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
       setErrors({});
     } catch (error) {
       console.error('Failed to change password:', error);
+      // エラーメッセージを表示
+      setErrors(prev => ({
+        ...prev,
+        general: 'パスワードの変更に失敗しました。'
+      }));
     } finally {
       setIsSubmitting(false);
     }
@@ -167,6 +198,23 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
 
     onClose();
   };
+
+  useEffect(() => {
+    // コンポーネントマウント時にユーザー情報を取得
+    const fetchUserInfo = async () => {
+      try {
+        const response = await userAPI.getUserInfo();
+        setUserInfo(response);
+        setOriginalUserInfo(response);
+      } catch (error) {
+        console.error('Failed to fetch user info:', error);
+      } finally {
+        setIsLoadingUserInfo(false);
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -237,6 +285,13 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
                     )}
                   </div>
 
+                  {/* エラーメッセージ表示 */}
+                  {errors.general && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm text-red-600">{errors.general}</p>
+                    </div>
+                  )}
+
                   <div className="flex space-x-3">
                     <button
                       onClick={handleSaveUserInfo}
@@ -262,14 +317,23 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">{t('configuration.name')}:</span>
-                    <span className="text-sm font-medium text-gray-800">{userInfo.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">{t('configuration.email')}:</span>
-                    <span className="text-sm font-medium text-gray-800">{userInfo.email}</span>
-                  </div>
+                  {isLoadingUserInfo ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                      <span className="ml-2 text-sm text-gray-600">読み込み中...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">{t('configuration.name')}:</span>
+                        <span className="text-sm font-medium text-gray-800">{userInfo.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">{t('configuration.email')}:</span>
+                        <span className="text-sm font-medium text-gray-800">{userInfo.email}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -341,6 +405,13 @@ const Configuration: React.FC<ConfigurationProps> = ({ onClose }) => {
                       <p className="text-sm text-red-600 mt-1">{errors.confirmPassword}</p>
                     )}
                   </div>
+
+                  {/* エラーメッセージ表示 */}
+                  {errors.general && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm text-red-600">{errors.general}</p>
+                    </div>
+                  )}
 
                   <div className="flex space-x-3">
                     <button

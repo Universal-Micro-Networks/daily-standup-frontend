@@ -150,6 +150,19 @@ class ApiClient {
     });
   }
 
+  // PATCHリクエスト
+  async patch<T>(
+    endpoint: string,
+    data?: any,
+    headers?: Record<string, string>
+  ): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: "PATCH",
+      headers,
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
   // DELETEリクエスト
   async delete<T>(
     endpoint: string,
@@ -196,6 +209,11 @@ export const authAPI = {
 
 // ユーザー関連のAPI
 export const userAPI = {
+  // ユーザー情報取得
+  async getUserInfo(): Promise<any> {
+    return apiClient.get("/users/me");
+  },
+
   // ユーザー一覧取得
   async getUsers(limit: number = 100, offset: number = 0): Promise<any[]> {
     try {
@@ -229,6 +247,24 @@ export const userAPI = {
   // ユーザー招待
   async inviteUser(data: { email: string; role?: string }): Promise<any> {
     return apiClient.post("/users/invite", data);
+  },
+
+  // パスワード変更
+  async changePassword(data: {
+    new_password: string;
+    confirm_password: string;
+  }): Promise<any> {
+    return apiClient.patch("/users/me/password", data);
+  },
+
+  // ユーザー情報更新
+  async updateUserInfo(data: { name?: string; email?: string }): Promise<any> {
+    return apiClient.patch("/users/me", data);
+  },
+
+  // 名前のみ更新
+  async updateUserName(data: { name: string }): Promise<any> {
+    return apiClient.put("/users/me", data);
   },
 
   // 招待中のユーザー一覧取得
