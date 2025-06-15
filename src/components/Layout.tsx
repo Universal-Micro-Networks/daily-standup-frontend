@@ -10,10 +10,11 @@ type PageType = 'dashboard' | 'daily-report' | 'team';
 interface LayoutProps {
   onLogout?: () => void;
   user?: any;
+  initialSidebarOpen?: boolean;
 }
 
-const Layout: React.FC<LayoutProps> = ({ onLogout, user }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+const Layout: React.FC<LayoutProps> = ({ onLogout, user, initialSidebarOpen = true }) => {
+  const [sidebarOpen, setSidebarOpen] = useState(initialSidebarOpen);
   const [currentPage, setCurrentPage] = useState<PageType>('daily-report');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showSettings, setShowSettings] = useState(false);

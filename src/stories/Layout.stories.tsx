@@ -6,6 +6,21 @@ const meta: Meta<typeof Layout> = {
   component: Layout,
   parameters: {
     layout: 'fullscreen',
+    docs: {
+      description: {
+        component: 'アプリケーションのメインレイアウトコンポーネントです。サイドバーとメインコンテンツエリアを管理します。',
+      },
+    },
+  },
+  argTypes: {
+    initialSidebarOpen: {
+      control: 'boolean',
+      description: 'サイドバーの初期開閉状態',
+    },
+    onLogout: {
+      action: 'logout',
+      description: 'ログアウト時のコールバック関数',
+    },
   },
   tags: ['autodocs'],
 };
@@ -13,9 +28,16 @@ const meta: Meta<typeof Layout> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  args: {
+    initialSidebarOpen: true,
+  },
+};
 
 export const WithSidebarClosed: Story = {
+  args: {
+    initialSidebarOpen: false,
+  },
   parameters: {
     docs: {
       description: {

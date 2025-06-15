@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { userAPI } from '../services/api';
+import { useTranslation } from '../utils/i18n';
 
 interface TeamProps {
   sidebarOpen: boolean;
@@ -25,6 +26,7 @@ interface PendingInvite {
 }
 
 const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
+  const { t } = useTranslation();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,7 +61,7 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
             id: user.id || user.user_id || user.uuid || '',
             name: user.name || user.username || user.display_name || user.full_name || 'Unknown',
             email: user.email || user.mail || '',
-            role: user.role || user.job_title || user.position || 'メンバー',
+            role: user.role || user.job_title || user.position || t('team.member'),
             avatar: user.avatar || user.profile_image || user.profile_picture,
             status: user.status || (user.is_active !== undefined ? (user.is_active ? 'active' : 'inactive') : 'active'),
             lastActive: user.last_active || user.last_login || user.updated_at || user.created_at
@@ -73,7 +75,7 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
 
       } catch (err) {
         console.error('Failed to fetch data:', err);
-        setError('データの取得に失敗しました');
+        setError(t('team.error'));
         setTeamMembers([]);
         setPendingInvites([]);
       } finally {
@@ -82,25 +84,25 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
     };
 
     fetchData();
-  }, []);
+  }, [t]);
 
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!inviteEmail.trim()) {
-      setInviteError('メールアドレスを入力してください');
+      setInviteError(t('team.emailRequired'));
       return;
     }
 
     // メールアドレスの形式チェック
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(inviteEmail)) {
-      setInviteError('有効なメールアドレスを入力してください');
+      setInviteError(t('team.invalidEmail'));
       return;
     }
 
     // 一時的に招待機能を無効化
-    setInviteError('招待機能は現在利用できません（バックエンド未実装）');
+    setInviteError(t('team.inviteError'));
     return;
 
     // 以下のコードは一時的にコメントアウト
@@ -198,7 +200,7 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
   };
 
   const getStatusText = (status: string) => {
-    return status === 'active' ? 'アクティブ' : '非アクティブ';
+    return status === 'active' ? t('team.active') : t('team.inactive');
   };
 
   const getInitials = (name: string) => {
@@ -237,7 +239,7 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
                 </svg>
               )}
             </button>
-            <h2 className="text-2xl font-semibold text-gray-800 mac-text-shadow">チーム</h2>
+            <h2 className="text-2xl font-semibold text-gray-800 mac-text-shadow">{t('team.title')}</h2>
           </div>
         </div>
       </header>
@@ -247,29 +249,29 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
         <div className="mac-card p-6 hover:mac-box-shadow transition-all duration-300 w-full">
           {/* ヘッダー部分 */}
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-semibold text-gray-800">チーム管理</h3>
+            <h3 className="text-xl font-semibold text-gray-800">{t('team.teamManagement')}</h3>
             <button
               onClick={() => setShowInviteForm(!showInviteForm)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
               disabled={true}
-              title="招待機能は現在利用できません（バックエンド未実装）"
+              title={t('team.inviteError')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
-              <span>メンバーを招待（未実装）</span>
+              <span>{t('team.inviteMember')}</span>
             </button>
           </div>
 
           {/* 招待フォーム */}
           {showInviteForm && (
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h4 className="text-lg font-medium text-blue-800 mb-4">新しいメンバーを招待</h4>
+              <h4 className="text-lg font-medium text-blue-800 mb-4">{t('team.inviteNewMember')}</h4>
               <form onSubmit={handleInviteUser} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="inviteEmail" className="block text-sm font-medium text-gray-700 mb-1">
-                      メールアドレス <span className="text-red-500">*</span>
+                      {t('team.email')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="email"
@@ -283,7 +285,7 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
                   </div>
                   <div>
                     <label htmlFor="inviteRole" className="block text-sm font-medium text-gray-700 mb-1">
-                      役職
+                      {t('team.role')}
                     </label>
                     <select
                       id="inviteRole"
@@ -292,11 +294,11 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={isInviting}
                     >
-                      <option value="メンバー">メンバー</option>
-                      <option value="開発者">開発者</option>
-                      <option value="デザイナー">デザイナー</option>
-                      <option value="プロジェクトマネージャー">プロジェクトマネージャー</option>
-                      <option value="QAエンジニア">QAエンジニア</option>
+                      <option value={t('team.member')}>{t('team.member')}</option>
+                      <option value={t('team.developer')}>{t('team.developer')}</option>
+                      <option value={t('team.designer')}>{t('team.designer')}</option>
+                      <option value={t('team.projectManager')}>{t('team.projectManager')}</option>
+                      <option value={t('team.qaEngineer')}>{t('team.qaEngineer')}</option>
                     </select>
                   </div>
                 </div>
@@ -326,10 +328,10 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
                     {isInviting ? (
                       <div className="flex items-center space-x-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span>招待中...</span>
+                        <span>{t('team.inviting')}</span>
                       </div>
                     ) : (
-                      '招待メールを送信'
+                      t('team.inviteEmail')
                     )}
                   </button>
                   <button
@@ -337,14 +339,14 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
                     onClick={() => {
                       setShowInviteForm(false);
                       setInviteEmail('');
-                      setInviteRole('メンバー');
+                      setInviteRole(t('team.member'));
                       setInviteError(null);
                       setInviteSuccess(null);
                     }}
                     className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
                     disabled={isInviting}
                   >
-                    キャンセル
+                    {t('team.cancel')}
                   </button>
                 </div>
               </form>
@@ -363,7 +365,7 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  メンバー ({teamMembers.length})
+                  {t('team.members')} ({teamMembers.length})
                 </button>
                 <button
                   onClick={() => setActiveTab('pending')}
@@ -373,9 +375,9 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
                       : 'border-transparent text-gray-400'
                   }`}
                   disabled={true}
-                  title="招待機能は現在利用できません（バックエンド未実装）"
+                  title={t('team.inviteError')}
                 >
-                  招待中 ({pendingInvites.length}) - 未実装
+                  {t('team.pending')} ({pendingInvites.length}) - {t('team.notImplemented')}
                 </button>
               </nav>
             </div>
@@ -386,7 +388,7 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
             <div className="relative">
               <input
                 type="text"
-                placeholder={activeTab === 'members' ? "メンバーを検索..." : "招待中のユーザーを検索..."}
+                placeholder={activeTab === 'members' ? t('team.searchMembers') : t('team.searchPending')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -404,7 +406,7 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">データを読み込み中...</p>
+                <p className="text-gray-600">{t('team.loading')}</p>
               </div>
             </div>
           )}
@@ -418,7 +420,7 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
                   onClick={() => window.location.reload()}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  再試行
+                  {t('team.retry')}
                 </button>
               </div>
             </div>
@@ -429,7 +431,7 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
             <div className="space-y-4">
               {filteredMembers.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  {searchTerm ? '検索結果が見つかりませんでした' : 'チームメンバーがいません'}
+                  {searchTerm ? t('team.noSearchResults') : t('team.noTeamMembers')}
                 </div>
               ) : (
                 filteredMembers.map((member) => (
@@ -458,7 +460,7 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
                           </span>
                           {member.lastActive && (
                             <span className="text-xs text-gray-500">
-                              最終アクティブ: {member.lastActive}
+                              {t('team.lastActive')}: {member.lastActive}
                             </span>
                           )}
                         </div>
@@ -484,7 +486,7 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
             <div className="space-y-4">
               {filteredInvites.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  {searchTerm ? '検索結果が見つかりませんでした' : '招待中のユーザーがいません'}
+                  {searchTerm ? t('team.noSearchResults') : t('team.noPendingUsers')}
                 </div>
               ) : (
                 filteredInvites.map((invite) => (
@@ -504,12 +506,12 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-lg font-semibold text-gray-800">{invite.email}</h3>
-                          <p className="text-sm text-gray-600">役職: {invite.role}</p>
+                          <p className="text-sm text-gray-600">{t('team.role')}: {invite.role}</p>
                           <p className="text-sm text-gray-500">招待日時: {formatDate(invite.invitedAt)}</p>
                         </div>
                         <div className="flex items-center space-x-2">
                           <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
-                            招待中
+                            {t('team.pending')}
                           </span>
                         </div>
                       </div>
@@ -548,23 +550,23 @@ const Team: React.FC<TeamProps> = ({ sidebarOpen, onToggleSidebar }) => {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <div className="text-2xl font-bold text-blue-600">{teamMembers.length}</div>
-                  <div className="text-sm text-blue-600">総メンバー数</div>
+                  <div className="text-sm text-blue-600">{t('team.totalMembers')}</div>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg">
                   <div className="text-2xl font-bold text-green-600">
                     {teamMembers.filter(m => m.status === 'active').length}
                   </div>
-                  <div className="text-sm text-green-600">アクティブメンバー</div>
+                  <div className="text-sm text-green-600">{t('team.activeMembers')}</div>
                 </div>
                 <div className="bg-yellow-50 p-4 rounded-lg">
                   <div className="text-2xl font-bold text-yellow-600">{pendingInvites.length}</div>
-                  <div className="text-sm text-yellow-600">招待中</div>
+                  <div className="text-sm text-yellow-600">{t('team.pendingInvites')}</div>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="text-2xl font-bold text-gray-600">
-                    {teamMembers.filter(m => m.role === '開発者').length}
+                    {teamMembers.filter(m => m.role === t('team.developer')).length}
                   </div>
-                  <div className="text-sm text-gray-600">開発者</div>
+                  <div className="text-sm text-gray-600">{t('team.developers')}</div>
                 </div>
               </div>
             </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { authAPI, dailyReportAPI } from '../services/api';
+import { useTranslation } from '../utils/i18n';
 
 interface DailyReportProps {
   sidebarOpen: boolean;
@@ -23,6 +24,7 @@ interface ReportData {
 }
 
 const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar, selectedDate = new Date() }) => {
+  const { t } = useTranslation();
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [reportData, setReportData] = useState<ReportData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -197,19 +199,16 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
       const errors: string[] = [];
 
       if (!formData.yesterdayWork.trim()) {
-        errors.push('昨日やったことは必須項目です。');
+        errors.push(t('dailyReport.validation.yesterdayWorkRequired'));
       }
 
       if (!formData.todayWork.trim()) {
-        errors.push('今日やることは必須項目です。');
+        errors.push(t('dailyReport.validation.todayWorkRequired'));
       }
 
-      // エラーがある場合はすべて表示
       if (errors.length > 0) {
         setSubmitError(errors.join('\n'));
-        errors.forEach(error => {
-          console.error(error);
-        });
+        setIsSubmitting(false);
         return;
       }
 
@@ -269,7 +268,7 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
 
     } catch (err) {
       console.error('Failed to submit report:', err);
-      setSubmitError(isEditing ? 'レポートの更新に失敗しました。もう一度お試しください。' : 'レポートの送信に失敗しました。もう一度お試しください。');
+      setSubmitError('レポートの送信に失敗しました');
     } finally {
       setIsSubmitting(false);
     }
@@ -381,7 +380,7 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
                 </svg>
               )}
             </button>
-            <h2 className="text-2xl font-semibold text-gray-800 mac-text-shadow">デイリーレポート</h2>
+            <h2 className="text-2xl font-semibold text-gray-800 mac-text-shadow">{t('dailyReport.title')}</h2>
           </div>
         </div>
       </header>
@@ -395,7 +394,7 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">データを読み込み中...</p>
+                <p className="text-gray-600">{t('dailyReport.loading')}</p>
               </div>
             </div>
           )}
@@ -404,17 +403,17 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
           {error && (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
-                <p className="text-red-600 mb-2">{error}</p>
+                <p className="text-red-600 mb-2">{t('dailyReport.error')}</p>
                 <button
                   onClick={() => {
                     const formattedDate = formatDate(selectedDate);
                     dailyReportAPI.getReports(formattedDate, 100, 0)
                       .then(setReportData)
-                      .catch(err => setError('レポートの取得に失敗しました'));
+                      .catch(err => setError(t('dailyReport.error')));
                   }}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  再試行
+                  {t('dailyReport.retry')}
                 </button>
               </div>
             </div>
@@ -428,17 +427,17 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-800 bg-gray-50/50">メンバー名</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-800 bg-gray-50/50">昨日やったこと</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-800 bg-gray-50/50">今日やること</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-800 bg-gray-50/50">困っていること・ボトルネック</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-800 bg-gray-50/50">{t('dailyReport.memberName')}</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-800 bg-gray-50/50">{t('dailyReport.yesterdayWork')}</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-800 bg-gray-50/50">{t('dailyReport.todayWork')}</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-800 bg-gray-50/50">{t('dailyReport.blockingIssues')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {!Array.isArray(reportData) || reportData.length === 0 ? (
                       <tr>
                         <td colSpan={4} className="py-8 text-center text-gray-500">
-                          {formatDate(selectedDate)}のレポートはありません
+                          {formatDate(selectedDate)}{t('dailyReport.noReports')}
                         </td>
                       </tr>
                     ) : (
@@ -473,7 +472,7 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
               <div className="lg:hidden space-y-4">
                 {!Array.isArray(reportData) || reportData.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
-                    {formatDate(selectedDate)}のレポートはありません
+                    {formatDate(selectedDate)}{t('dailyReport.noReports')}
                   </div>
                 ) : (
                   reportData.map((item) => (
@@ -483,19 +482,19 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
                       </div>
                       <div className="space-y-3">
                         <div>
-                          <h5 className="text-sm font-medium text-gray-700 mb-1">昨日やったこと:</h5>
+                          <h5 className="text-sm font-medium text-gray-700 mb-1">{t('dailyReport.yesterdayWork')}:</h5>
                           <div className="text-sm text-gray-600 leading-relaxed">
                             {renderTextWithLinks(item.yesterdayWork)}
                           </div>
                         </div>
                         <div>
-                          <h5 className="text-sm font-medium text-gray-700 mb-1">今日やること:</h5>
+                          <h5 className="text-sm font-medium text-gray-700 mb-1">{t('dailyReport.todayWork')}:</h5>
                           <div className="text-sm text-gray-600 leading-relaxed">
                             {renderTextWithLinks(item.todayWork)}
                           </div>
                         </div>
                         <div>
-                          <h5 className="text-sm font-medium text-gray-700 mb-1">困っていること・ボトルネック:</h5>
+                          <h5 className="text-sm font-medium text-gray-700 mb-1">{t('dailyReport.blockingIssues')}:</h5>
                           <div className="text-sm text-gray-600 leading-relaxed">
                             {renderTextWithLinks(item.blockingIssues)}
                           </div>
@@ -537,7 +536,7 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
           {/* ヘッダー */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <h3 className="text-xl font-semibold text-gray-800">
-              {isEditing ? 'デイリーレポート編集' : 'デイリーレポート入力'}
+              {isEditing ? t('dailyReport.editTitle') : t('dailyReport.createTitle')}
             </h3>
             <button
               onClick={handleClose}
@@ -554,22 +553,22 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
             {/* 現在のレポート表示（編集モードの場合） */}
             {isEditing && userReport && (
               <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">現在のレポート内容</h4>
+                <h4 className="text-sm font-medium text-gray-700 mb-3">{t('dailyReport.currentReport')}</h4>
                 <div className="space-y-3">
                   <div>
-                    <h5 className="text-xs font-medium text-gray-600 mb-1">昨日やったこと:</h5>
+                    <h5 className="text-xs font-medium text-gray-600 mb-1">{t('dailyReport.yesterdayWorkLabel')}:</h5>
                     <div className="text-xs text-gray-600 leading-relaxed">
                       {renderTextWithLinks(userReport.yesterday_work || userReport.yesterdayWork || '')}
                     </div>
                   </div>
                   <div>
-                    <h5 className="text-xs font-medium text-gray-600 mb-1">今日やること:</h5>
+                    <h5 className="text-xs font-medium text-gray-600 mb-1">{t('dailyReport.todayWorkLabel')}:</h5>
                     <div className="text-xs text-gray-600 leading-relaxed">
                       {renderTextWithLinks(userReport.today_plan || userReport.todayWork || '')}
                     </div>
                   </div>
                   <div>
-                    <h5 className="text-xs font-medium text-gray-600 mb-1">困っていること・ボトルネック:</h5>
+                    <h5 className="text-xs font-medium text-gray-600 mb-1">{t('dailyReport.blockingIssuesLabel')}:</h5>
                     <div className="text-xs text-gray-600 leading-relaxed">
                       {renderTextWithLinks(userReport.issues || userReport.blockingIssues || '')}
                     </div>
@@ -582,13 +581,13 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
               {/* 昨日やったこと */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  昨日やったこと <span className="text-red-500">*</span>
+                  {t('dailyReport.yesterdayWorkLabel')} <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={formData.yesterdayWork}
                   onChange={(e) => handleInputChange('yesterdayWork', e.target.value)}
                   className="w-80 h-32 px-1 py-0.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  placeholder="昨日完了したタスクを入力してください"
+                  placeholder={t('dailyReport.yesterdayWorkPlaceholder')}
                 />
               </div>
 
@@ -596,12 +595,12 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700">
-                    今日やること <span className="text-red-500">*</span>
+                    {t('dailyReport.todayWorkLabel')} <span className="text-red-500">*</span>
                   </label>
                   <button
                     onClick={handleCopyYesterdayToToday}
                     className="p-1 hover:bg-gray-100 rounded transition-colors"
-                    title="昨日やったことをコピー"
+                    title={t('dailyReport.copyYesterday')}
                   >
                     <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -612,20 +611,20 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
                   value={formData.todayWork}
                   onChange={(e) => handleInputChange('todayWork', e.target.value)}
                   className="w-80 h-32 px-1 py-0.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  placeholder="今日予定しているタスクを入力してください"
+                  placeholder={t('dailyReport.todayWorkPlaceholder')}
                 />
               </div>
 
               {/* 困っていること・ボトルネック */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  困っていること・ボトルネック
+                  {t('dailyReport.blockingIssuesLabel')}
                 </label>
                 <textarea
                   value={formData.blockingIssues}
                   onChange={(e) => handleInputChange('blockingIssues', e.target.value)}
                   className="w-80 h-24 px-1 py-0.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  placeholder="困っていることやブロックしている問題があれば入力してください"
+                  placeholder={t('dailyReport.blockingIssuesPlaceholder')}
                 />
               </div>
             </div>
@@ -634,7 +633,7 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
             <div className="p-6 border-t border-gray-200">
               {/* 頻出タスク一覧 */}
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">頻出タスク一覧</h4>
+                <h4 className="text-sm font-medium text-gray-700 mb-3">{t('dailyReport.frequentTasks')}</h4>
                 <div className="space-y-2 max-h-24 overflow-y-auto">
                   {frequentTasks.map((task, index) => (
                     <div
@@ -657,7 +656,7 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
 
               {/* 優先度の高い次のタスク一覧 */}
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">優先度の高い次のタスク一覧</h4>
+                <h4 className="text-sm font-medium text-gray-700 mb-3">{t('dailyReport.priorityTasks')}</h4>
                 <div className="space-y-2 max-h-32 overflow-y-auto">
                   {recentTasks.map((task, index) => (
                     <div
@@ -708,10 +707,10 @@ const DailyReport: React.FC<DailyReportProps> = ({ sidebarOpen, onToggleSidebar,
                 {isSubmitting ? (
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    送信中...
+                    {t('dailyReport.submitError')}
                   </div>
                 ) : (
-                  isEditing ? '更新' : '登録'
+                  isEditing ? t('dailyReport.update') : t('dailyReport.register')
                 )}
               </button>
             </div>

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../utils/i18n';
 
 type PageType = 'dashboard' | 'daily-report' | 'team';
 
@@ -25,6 +27,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onDateChange,
   onOpenSettings
 }) => {
+  const { logout } = useAuth();
+  const { t } = useTranslation();
   const today = new Date();
   const [showCalendar, setShowCalendar] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -43,9 +47,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const menuItems = [
-    { id: 'dashboard', label: 'ダッシュボード', icon: '📊' },
-    { id: 'daily-report', label: 'デイリーレポート', icon: '📝' },
-    { id: 'team', label: 'チーム', icon: '👥' },
+    { id: 'dashboard', label: t('sidebar.dashboard'), icon: '📊' },
+    { id: 'daily-report', label: t('sidebar.dailyReport'), icon: '📝' },
+    { id: 'team', label: t('sidebar.team'), icon: '👥' },
   ];
 
   const handleMenuClick = (pageId: string) => {
@@ -60,9 +64,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const handleLogout = () => {
     setShowUserMenu(false);
-    if (onLogout) {
-      onLogout();
-    }
+    logout();
   };
 
   const handleSettingsClick = () => {
@@ -76,9 +78,28 @@ const Sidebar: React.FC<SidebarProps> = ({
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const day = date.getDate();
-    const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+    const weekdays = [
+      t('calendar.sundayFull'),
+      t('calendar.mondayFull'),
+      t('calendar.tuesdayFull'),
+      t('calendar.wednesdayFull'),
+      t('calendar.thursdayFull'),
+      t('calendar.fridayFull'),
+      t('calendar.saturdayFull')
+    ];
     const weekday = weekdays[date.getDay()];
     return { year, month, day, weekday };
+  };
+
+  // 月の名前を取得する関数
+  const getMonthName = (month: number) => {
+    return t(`calendar.months.${month}`);
+  };
+
+  // 年月表示を翻訳形式で生成する関数
+  const formatYearMonth = (year: number, month: number) => {
+    const monthName = getMonthName(month);
+    return t('calendar.yearMonthFormat', { year, month: monthName });
   };
 
   const generateCalendarDays = (date: Date) => {
@@ -126,6 +147,17 @@ const Sidebar: React.FC<SidebarProps> = ({
   const { year, month, day, weekday } = formatDate(selectedDate);
   const calendarDays = generateCalendarDays(selectedDate);
 
+  // 曜日の配列
+  const weekdayNames = [
+    t('calendar.sunday'),
+    t('calendar.monday'),
+    t('calendar.tuesday'),
+    t('calendar.wednesday'),
+    t('calendar.thursday'),
+    t('calendar.friday'),
+    t('calendar.saturday')
+  ];
+
   return (
     <div className={`
       h-full mac-sidebar shadow-lg
@@ -156,7 +188,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 className="text-center relative cursor-pointer"
                 onClick={() => setShowCalendar(!showCalendar)}
               >
-                <div className="text-lg font-semibold text-gray-600 mb-4">{year}年{month}月</div>
+                <div className="text-lg font-semibold text-gray-600 mb-4">{formatYearMonth(year, month)}</div>
                 <div className="flex items-center justify-center mb-2">
                   <button
                     onClick={(e) => {
@@ -198,7 +230,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </svg>
                   </button>
                 </div>
-                <div className="text-sm text-gray-500">{weekday}曜日</div>
+                <div className="text-sm text-gray-500">{weekday}</div>
 
                 {/* 月カレンダー */}
                 {showCalendar && (
@@ -216,7 +248,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                         </svg>
                       </button>
-                      <span className="text-sm font-medium">{year}年{month}月</span>
+                      <span className="text-sm font-medium">{formatYearMonth(year, month)}</span>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -232,7 +264,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
                     {/* 曜日ヘッダー */}
                     <div className="grid grid-cols-7 gap-1 mb-2">
-                      {['日', '月', '火', '水', '木', '金', '土'].map((dayName) => (
+                      {weekdayNames.map((dayName) => (
                         <div key={dayName} className="text-xs text-gray-500 text-center p-1">
                           {dayName}
                         </div>
@@ -324,14 +356,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                     className="w-full flex items-center px-4 py-3 text-left hover:bg-gray-50 transition-colors duration-200 text-gray-700 border-b border-gray-100"
                   >
                     <span className="mr-3 text-lg">⚙️</span>
-                    <span className="font-medium">設定</span>
+                    <span className="font-medium">{t('sidebar.settings')}</span>
                   </button>
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center px-4 py-3 text-left hover:bg-gray-50 transition-colors duration-200 text-gray-700"
                   >
                     <span className="mr-3 text-lg">🚪</span>
-                    <span className="font-medium">ログアウト</span>
+                    <span className="font-medium">{t('sidebar.logout')}</span>
                   </button>
                 </div>
               )}
@@ -346,7 +378,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <li>
                 <button className="w-full flex items-center px-3 py-2 text-left rounded-lg transition-all duration-200 mac-button text-gray-700 hover:bg-blue-50/80 hover:text-blue-600">
                   <span className="mr-3 text-lg">❓</span>
-                  <span className="font-medium">ヘルプ</span>
+                  <span className="font-medium">{t('sidebar.help')}</span>
                 </button>
               </li>
             </ul>
